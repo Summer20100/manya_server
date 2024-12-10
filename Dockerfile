@@ -4,11 +4,17 @@ FROM python:3.11-slim
 # Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
+# Обновляем pip
+RUN pip install --upgrade pip
+
+RUN apt-get update && apt-get install -y libpq-dev
+
+
 # Копируем requirements.txt для установки зависимостей
 COPY requirements.txt .
 
 # Устанавливаем зависимости с помощью pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt || { echo 'pip install failed'; exit 1; }
 
 # Копируем остальные файлы проекта
 COPY . .
