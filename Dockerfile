@@ -20,7 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt || { echo 'pip install failed
 COPY . .
 
 # Указываем команду для запуска приложения (например, с использованием uvicorn для FastAPI)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "4000"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "4000"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "main:app", "--host", "0.0.0.0", "--port", "4000"]
+
 
 # Открываем порт для приложения
 EXPOSE 4000

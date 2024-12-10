@@ -7,7 +7,7 @@ psycopg2
 python-dotenv
 uvicorn
 python-dotenv
-uvicorn[gunicorn]
+gunicorn
 asyncio
 asyncpg
 sqlalchemy
