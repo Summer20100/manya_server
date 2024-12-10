@@ -6,6 +6,7 @@ fastapi
 psycopg2
 python-dotenv
 uvicorn
+uvicorn[gunicorn]
 asyncio
 asyncpg
 sqlalchemy
