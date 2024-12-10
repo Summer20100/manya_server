@@ -6,6 +6,7 @@ fastapi
 psycopg2
 python-dotenv
 uvicorn
+python-dotenv
 uvicorn[gunicorn]
 asyncio
 asyncpg
