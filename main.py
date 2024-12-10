@@ -16,6 +16,10 @@ async def startup():
     
 # USER
 
+@app.get("/", status_code=status.HTTP_200_OK, description="Say HallOOOOO")
+async def say_hallo():
+    return "HALOOOUUUU"
+
 @app.post("/users", status_code=status.HTTP_201_CREATED, description="Add a new user")
 async def add_user(user: UserBase):
     try:
