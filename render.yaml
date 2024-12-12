@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: fastapi-app
+    envVars:
+      - key: PORT
+        value: "4000"
