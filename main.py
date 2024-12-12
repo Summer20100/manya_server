@@ -6,7 +6,7 @@ from schemas import User, UserBase
 from models import User as UserModel
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
-from typing import List
+from typing import List, Optional
 from controllers.user_controllers import UserControllers
 import os
 import uvicorn
@@ -19,9 +19,13 @@ async def say_hallo():
 async def add_user(user: UserBase, db: AsyncSession = Depends(get_db)):
     return await UserControllers.create_user(user, db)
 
-@app.get("/{key}/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
-async def get_users(key: str, db: AsyncSession = Depends(get_db)):
-    return await UserControllers.get_users(key, db)
+# @app.get("/{key}/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
+# async def get_users(key: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+#     return await UserControllers.get_users(key, db)
+
+@app.get("/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
+async def get_users(db: AsyncSession = Depends(get_db)):
+    return await UserControllers.get_users(db)
 
 @app.get("/users/{id}", response_model=User, status_code=status.HTTP_200_OK, description="Получить пользователя по ID")
 async def get_user_by_ID(id: int, db: AsyncSession = Depends(get_db)):
@@ -34,7 +38,6 @@ async def update_user(id: int, user: UserBase, db: AsyncSession = Depends(get_db
 @app.delete("/users/{id}", status_code=status.HTTP_200_OK, description="Удалить пользователя по ID")
 async def remove_user(id: int, db: AsyncSession = Depends(get_db)):
     return await UserControllers.del_user(id, db)
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 4000))

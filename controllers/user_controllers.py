@@ -31,15 +31,29 @@ class UserControllers:
                 detail="Произошла непредвиденная ошибка"
             )
             
-    async def get_users(key: str, db: AsyncSession):
+    # async def get_users(key: str, db: AsyncSession):
+    #     try:
+    #         result = await db.execute(select(User).order_by(asc(User.id)))
+    #         users = result.scalars().all()
+    #         if key != config.key:
+    #             raise HTTPException(
+    #                 status_code=status.HTTP_403_FORBIDDEN,
+    #                 detail="Доступ запрещён. Введён неправильный код"
+    #             )
+    #         return users
+    #     except HTTPException as http_ex:
+    #         raise http_ex
+    #     except Exception as e:
+    #         logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
+    #         raise HTTPException(
+    #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    #             detail="Произошла непредвиденная ошибка"
+    #         )
+    
+    async def get_users(db: AsyncSession):
         try:
             result = await db.execute(select(User).order_by(asc(User.id)))
             users = result.scalars().all()
-            if key != config.key:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Доступ запрещён. Введён неправильный код"
-                )
             return users
         except HTTPException as http_ex:
             raise http_ex
