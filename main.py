@@ -19,9 +19,9 @@ async def say_hallo():
 async def add_user(user: UserBase, db: AsyncSession = Depends(get_db)):
     return await UserControllers.create_user(user, db)
 
-@app.get("/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
-async def get_users(db: AsyncSession = Depends(get_db)):
-    return await UserControllers.get_users(db)
+@app.get("/{key}/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
+async def get_users(key: str, db: AsyncSession = Depends(get_db)):
+    return await UserControllers.get_users(key, db)
 
 @app.get("/users/{id}", response_model=User, status_code=status.HTTP_200_OK, description="Получить пользователя по ID")
 async def get_user_by_ID(id: int, db: AsyncSession = Depends(get_db)):
