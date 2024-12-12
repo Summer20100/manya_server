@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from typing import List
 from controllers.user_controllers import UserControllers
 import os
+import uvicorn
 
 @app.get("/", status_code=status.HTTP_200_OK, description="Приветствие")
 async def say_hallo():
@@ -36,5 +37,5 @@ async def remove_user(id: int, db: AsyncSession = Depends(get_db)):
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 4000)))
+    port = int(os.environ.get("PORT", 4000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, log_level="info")

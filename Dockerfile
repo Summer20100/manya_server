@@ -14,14 +14,15 @@ RUN apt-get update && apt-get install -y libpq-dev
 COPY requirements.txt .
 
 # Устанавливаем зависимости с помощью pip
-RUN pip install --no-cache-dir -r requirements.txt || { echo 'pip install failed'; exit 1; }
+RUN pip install requirements.txt
 
 # Копируем остальные файлы проекта
 COPY . .
 
 # Указываем команду для запуска приложения (например, с использованием uvicorn для FastAPI)
-# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "4000"]
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "main:app", "--host", "0.0.0.0", "--port", "4000"]
+# CMD ["uvicorn", "main:app"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "main:app", "--bind", "0.0.0.0:4000"]
+# CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "main:app", "--host", "0.0.0.0", "--port", "4000"]
 
 
 # Открываем порт для приложения
