@@ -6,7 +6,7 @@ class UserBase(BaseModel):
     name: str
     email: str
 
-class User(UserBase):
+class User(BaseModel):
     id: int
     name: str
     email: str

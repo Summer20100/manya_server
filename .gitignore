@@ -4,6 +4,7 @@ __pycache__/
 
 # Файлы конфигурации для venv
 venv/
+env/
 .venv
 .env
 
