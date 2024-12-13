@@ -2,8 +2,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from database import init_db, get_db
-from schemas import UserBase
-from models import User
+from schemas import CategoryBase
+from models import Category
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import asc
@@ -11,15 +11,15 @@ from typing import List
 import logging
 import config
 
-class UserControllers: 
-    async def create_user(user: UserBase, db: AsyncSession):
+class CategoryControllers: 
+    async def create_category(category: CategoryBase, db: AsyncSession):
         try:
-            new_user = User(name=user.name, email=user.email)
-            db.add(new_user)
+            new_category = Category(title=category.title, description=category.description)
+            db.add(new_category)
             await db.commit()
-            return { "message": "Пользователь добавлен успешно" }
+            return { "message": "Категория добавлена успешно" }
         except IntegrityError as e:
-            conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Пользователь с таким email уже существует")        
+            conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Категория с таким названием уже существует")        
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=conflict_detail
@@ -31,10 +31,10 @@ class UserControllers:
                 detail="Произошла непредвиденная ошибка"
             )
             
-    # async def get_users(key: str, db: AsyncSession):
+    # async def get_categories(key: str, db: AsyncSession):
     #     try:
-    #         result = await db.execute(select(User).order_by(asc(User.id)))
-    #         users = result.scalars().all()
+    #         result = await db.execute(select(Category).order_by(asc(Category.id)))
+    #         categories = result.scalars().all()
     #         if key != config.key:
     #             raise HTTPException(
     #                 status_code=status.HTTP_403_FORBIDDEN,
@@ -50,11 +50,11 @@ class UserControllers:
     #             detail="Произошла непредвиденная ошибка"
     #         )
     
-    async def get_users(db: AsyncSession):
+    async def get_categories(db: AsyncSession):
         try:
-            result = await db.execute(select(User).order_by(asc(User.id)))
-            users = result.scalars().all()
-            return users
+            result = await db.execute(select(Category).order_by(asc(Category.id)))
+            categories = result.scalars().all()
+            return categories
         except HTTPException as http_ex:
             raise http_ex
         except Exception as e:
@@ -64,16 +64,16 @@ class UserControllers:
                 detail="Произошла непредвиденная ошибка"
             )
             
-    async def get_user_by_id(id: int, db: AsyncSession):
+    async def get_category_by_id(id: int, db: AsyncSession):
         try:
-            result = await db.execute(select(User).filter(User.id == id))
+            result = await db.execute(select(Category).filter(Category.id == id))
             user = result.scalars().first()
             if user:
                 return user
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Пользователь не найден"
+                    detail="Категория не найдена"
                 )
         except HTTPException as http_ex:
             raise http_ex
@@ -84,24 +84,24 @@ class UserControllers:
                 detail="Произошла непредвиденная ошибка"
             )
             
-    async def update_user(id: int, user: UserBase, db: AsyncSession):
+    async def update_category(id: int, category: CategoryBase, db: AsyncSession):
         try:
-            result = await db.execute(select(User).filter(User.id == id))
-            existing_user = result.scalars().first()
-            if existing_user:
-                existing_user.name = user.name
-                existing_user.email = user.email
+            result = await db.execute(select(Category).filter(Category.id == id))
+            existing_category = result.scalars().first()
+            if existing_category:
+                existing_category.title = category.title
+                existing_category.description = category.description
                 await db.commit()
-                return {"message": "Пользователь обновлен успешно"}
+                return {"message": "Категория обновлена успешно"}
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Пользователь не найден"
+                    detail="Категория не найдена"
                 )
         except HTTPException as http_ex:
             raise http_ex
         except IntegrityError as e:
-            conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Пользователь с таким email уже существует")        
+            conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Категория с таким названием уже существует")        
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=conflict_detail
@@ -113,19 +113,18 @@ class UserControllers:
                 detail="Произошла непредвиденная ошибка"
             )
         
-    
-    async def del_user(id: int, db: AsyncSession):
+    async def del_category(id: int, db: AsyncSession):
         try:
-            result = await db.execute(select(User).filter(User.id == id))
-            user = result.scalars().first()
-            if user:
-                await db.delete(user)
+            result = await db.execute(select(Category).filter(Category.id == id))
+            category = result.scalars().first()
+            if category:
+                await db.delete(category)
                 await db.commit()
-                return {"message": "Пользователь удален успешно"}
+                return {"message": "Категория удалена успешно"}
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Пользователь не найден"
+                    detail="Категория не найдена"
                 )
         except HTTPException as http_ex:
             raise http_ex

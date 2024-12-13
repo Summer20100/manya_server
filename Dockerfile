@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y libpq-dev
 COPY requirements.txt .
 
 # Устанавливаем зависимости с помощью pip
-RUN pip install requirements.txt
+RUN pip install -r requirements.txt
 
 # Копируем остальные файлы проекта
 COPY . .
