@@ -15,7 +15,7 @@ engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False,
+    expire_on_commit=False
 )
 
 # Базовый класс для моделей
