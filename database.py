@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import config
 from contextlib import asynccontextmanager
+from fastapi.middleware.cors import CORSMiddleware
 
 # Строка подключения
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{config.user}:{config.password}@{config.host}:{config.port}/{config.dbname}"
@@ -38,3 +39,15 @@ async def lifespan(app: FastAPI):
     print("Shutdown process")
 
 app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "http://localhost:5173/",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],  # Разрешённые источники
+    allow_credentials=True,  # Разрешить отправку cookie
+    allow_methods=["*"],  # Разрешённые методы (GET, POST и т.д.)
+    allow_headers=["*"],  # Разрешённые заголовки
+)
