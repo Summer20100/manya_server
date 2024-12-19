@@ -13,9 +13,43 @@ from typing import List
 import logging
 import config
 
+def validate_product_data(product):
+    errors = []
+
+    if product.price_for_itm < 0:
+        errors.append("Стоимость продукта меньше 0")
+    if product.weight_for_itm < 0:
+        errors.append("Вес продукта меньше 0")
+
+    price_str = str(product.price_for_itm).replace(',', '.')
+    weight_str = str(product.weight_for_itm).replace(',', '.')
+
+    if price_str.startswith('0') and len(price_str) > 1 and price_str[1].isdigit():
+        errors.append("Стоимость продукта не может начинаться с 0 если она больше 0")
+    if weight_str.startswith('0') and len(weight_str) > 1 and weight_str[1].isdigit():
+        errors.append("Вес продукта не может начинаться с 0 если она больше 0")
+    try:
+        product.price_for_itm = float(price_str)
+    except ValueError:
+        errors.append("Стоимость продукта должна быть числом формата 0.00")
+
+    try:
+        product.weight_for_itm = float(weight_str)
+    except ValueError:
+        errors.append("Вес продукта должна быть числом формата 0.00")
+
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=errors
+        )
+
+
 class ProductControllers: 
     async def create_product(product: ProductBase, db: AsyncSession):
         try:
+            validate_product_data(product)
+            
             new_product = Product(
                 title = product.title, 
                 description = product.description,
@@ -33,6 +67,10 @@ class ProductControllers:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=conflict_detail
             )
+        except HTTPException as http_ex:
+            raise http_ex
+        except ValidationError as e:
+            print("ValidationError:", e)
         except Exception as e:
             logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
             raise HTTPException(
@@ -74,68 +112,49 @@ class ProductControllers:
                 detail="Произошла непредвиденная ошибка"
             )
             
-    async def update_product(id: int, product: ProductBase, db: AsyncSession):
+    async def update_product(id: int, product:ProductBase, db: AsyncSession):
         try:
-            
-            some_error = []
-            if product.price_for_itm < 0:
-                some_error.append("Стоимость продукта меньше 0")
-            if product.weight_for_itm < 0:
-                some_error.append("Вес продукта меньше 0")
-            price_str = str(product.price_for_itm)
-            weigh_str = str(product.weight_for_itm)
-            if price_str.startswith('0') and len(price_str) > 1 and price_str[1].isdigit() and price_str[1] != '0':
-                some_error.append("Стоимость продукта не может начинаться с 0")
-            if price_str.startswith('0') and len(weigh_str) > 1 and weigh_str[1].isdigit() and weigh_str[1] != '0':
-                some_error.append("Вес продукта не может начинаться с 0")
-            price_str = price_str.replace(',', '.')
-            weigh_str = weigh_str.replace(',', '.')
-            try:
-                product.price_for_itm = float(price_str)
-            except ValueError:
-                some_error.append("Стоимость продукта должна быть числом формата 0.00")
-            try:
-                product.weight_for_itm = float(weigh_str)
-            except ValueError:
-                some_error.append("Вес продукта должна быть числом формата 0.00")
-            if some_error:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=some_error
-                )
-                
-            
+            validate_product_data(product)
+
             result = await db.execute(select(Product).filter(Product.id == id))
-            existing_category = result.scalars().first()
-            if existing_category:
-                existing_category.title = product.title
-                existing_category.description = product.description
-                existing_category.price_for_itm = product.price_for_itm
-                existing_category.weight_for_itm = product.weight_for_itm
-                existing_category.is_active = product.is_active
-                existing_category.category_id = product.category_id
-                await db.commit()
-                return {"message": "Продукт обновлен успешно"}
-            else:
+            existing_product = result.scalars().first()
+
+            if not existing_product:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Продукт не найден"
                 )
-        except HTTPException as http_ex:
-            raise http_ex
+            existing_product.title = product.title
+            existing_product.description = product.description
+            existing_product.price_for_itm = product.price_for_itm
+            existing_product.weight_for_itm = product.weight_for_itm
+            existing_product.is_active = product.is_active
+            existing_product.category_id = product.category_id
+
+            await db.commit()
+            return {"message": "Продукт обновлен успешно"}
+
         except IntegrityError as e:
-            conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Продукт с таким названием уже существует")
+            error_code = getattr(e.orig, 'pgcode', None)
+            if error_code == "23503":
+                detail = "Категории ID не найдено"
+            elif error_code == "23505":
+                detail = "Продукт с таким названием уже существует"
+            else:
+                detail = "Произошла непредвиденная ошибка"
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=conflict_detail
+                detail= detail
             )
+        except HTTPException:
+            raise
         except Exception as e:
             logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Произошла непредвиденная ошибка"
             )
-        
+
     async def del_product(id: int, db: AsyncSession):
         try:
             result = await db.execute(select(Product).filter(Product.id == id))

@@ -1,19 +1,23 @@
 from fastapi import FastAPI, HTTPException, Depends, status
+from pydantic import BaseModel, FieldValidationInfo, field_validator, ValidationError
 import re
+from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from database import init_db, get_db, app
-from schemas import User, UserBase, Category, CategoryBase, Product, ProductBase
-from models import User as UserModel, Category as CategoryModel, Product as ProductModel
+from schemas import Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order
+from models import Client as ClientModel, Category as CategoryModel, Product as ProductModel
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
-from controllers.user_controllers import UserControllers
+from controllers.client_controllers import ClientControllers
 from controllers.category_controllers import CategoryControllers
 from controllers.product_controllers import ProductControllers
+from controllers.order_controllers import OrderControllers
 import os
+import logging
 import uvicorn
 
 # Создание таблиц если их не существует
@@ -26,31 +30,31 @@ async def on_startup():
 async def say_hallo():
     return "HALOOOUUUU"
 
-# Пользователи
+# Клиенты
 
-@app.post("/users", status_code=status.HTTP_201_CREATED, description="Добавить нового пользователя")
-async def add_user(user: UserBase, db: AsyncSession = Depends(get_db)):
-    return await UserControllers.create_user(user, db)
+@app.post("/clients", status_code=status.HTTP_201_CREATED, description="Добавить нового клиента")
+async def add_client(client: ClientBase, db: AsyncSession = Depends(get_db)):
+    return await ClientControllers.create_client(client, db)
 
 # @app.get("/{key}/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
 # async def get_users(key: Optional[str] = None, db: AsyncSession = Depends(get_db)):
 #     return await UserControllers.get_users(key, db)
 
-@app.get("/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
-async def get_users(db: AsyncSession = Depends(get_db)):
-    return await UserControllers.get_users(db)
+@app.get("/clients", response_model=List[Client], status_code=status.HTTP_200_OK, description="Получить всех клиентов")
+async def get_clients(db: AsyncSession = Depends(get_db)):
+    return await ClientControllers.get_clients(db)
 
-@app.get("/users/{id}", response_model=User, status_code=status.HTTP_200_OK, description="Получить пользователя по ID")
-async def get_user_by_ID(id: int, db: AsyncSession = Depends(get_db)):
-    return await UserControllers.get_user_by_id(id, db)
+@app.get("/clients/{id}", response_model=Client, status_code=status.HTTP_200_OK, description="Получить клиента по ID")
+async def get_client_by_ID(id: int, db: AsyncSession = Depends(get_db)):
+    return await ClientControllers.get_client_by_id(id, db)
 
-@app.put("/users/{id}", status_code=status.HTTP_200_OK, description="Обновить пользователя по ID")
-async def update_user(id: int, user: UserBase, db: AsyncSession = Depends(get_db)):
-    return await UserControllers.update_user(id, user, db)
+@app.put("/clients/{id}", status_code=status.HTTP_200_OK, description="Обновить информацию клиента по ID")
+async def update_client(id: int, client: ClientBase, db: AsyncSession = Depends(get_db)):
+    return await ClientControllers.update_client(id, client, db)
 
-@app.delete("/users/{id}", status_code=status.HTTP_200_OK, description="Удалить пользователя по ID")
-async def remove_user(id: int, db: AsyncSession = Depends(get_db)):
-    return await UserControllers.del_user(id, db)
+@app.delete("/clients/{id}", status_code=status.HTTP_200_OK, description="Удалить клиента по ID")
+async def remove_client(id: int, db: AsyncSession = Depends(get_db)):
+    return await ClientControllers.del_client(id, db)
 
 # Категории
 
@@ -121,24 +125,94 @@ async def get_product_by_ID(id: int, db: AsyncSession = Depends(get_db)):
 
 @app.put("/products/{id}", status_code=status.HTTP_200_OK, description="Обновить продукт по ID")
 async def update_product(id: int, product: ProductBase, db: AsyncSession = Depends(get_db)):
-    # await validate_product(product)
-    return await ProductControllers.update_product(id, product, db)
+    try:
+        return await ProductControllers.update_product(id, product, db)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.delete("/products/{id}", status_code=status.HTTP_200_OK, description="Удалить продукт по ID")
 async def remove_product(id: int, db: AsyncSession = Depends(get_db)):
     return await ProductControllers.del_product(id, db)
 
+# Заказы
+
+@app.post("/orders", status_code=status.HTTP_201_CREATED, description="Добавить новый заказ")
+async def add_order(order: OrderBase, db: AsyncSession = Depends(get_db)):
+    return await OrderControllers.create_order(order, db)
+
+@app.get("/orders", response_model=List[Order], status_code=status.HTTP_200_OK, description="Получить все заказы")
+async def get_orders(db: AsyncSession = Depends(get_db)):
+    return await OrderControllers.get_orders(db)
+
+@app.get("/orders/{id}", response_model=Order, status_code=status.HTTP_200_OK, description="Получить заказ по ID")
+async def get_order_by_ID(id: int, db: AsyncSession = Depends(get_db)):
+    return await OrderControllers.get_order_by_id(id, db)
 
 
-# @app.exception_handler(RequestValidationError)
-# async def validation_exception_handler(request, exc):
-#     return JSONResponse(
-#         status_code=400,
-#         content={
-#             "message": "Некорректный JSON или данные запроса",
-#             "details": exc.errors()
-#         },
-#     )
+@app.put("/orders/{id}", status_code=status.HTTP_200_OK, description="Обновить заказ по ID")
+async def update_order(id: int, order: OrderBase, db: AsyncSession = Depends(get_db)):
+    return await OrderControllers.update_order(id, order, db)
+
+
+@app.delete("/orders/{id}", status_code=status.HTTP_200_OK, description="Удалить заказ по ID")
+async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
+    return await OrderControllers.del_order(id, db)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    try:
+       
+        error = exc.errors()[0] if exc.errors() else {}
+        error_type = error.get("type", None)
+        error_field = error.get("loc", [])[1] if len(error.get("loc", [])) > 1 else None
+        error_msg = error.get("msg", "")
+        error_ctx = error.get("ctx", {}).get("error", "")
+
+        some_error = ""
+
+        if error_ctx == "Expecting ',' delimiter":
+            some_error = "Стоимость и/или вес продукта не должны начинаться с 0 если больше 0"
+        elif error_ctx == "Expecting property name enclosed in double quotes":
+            some_error = "Стоимость и/или вес продукта должны быть в формате 00.00"
+        elif error_ctx == "Expecting value":
+            some_error = "Ошибка типа данных при отправлении запроса"   
+            
+        elif error_type == "date_from_datetime_parsing" and error_field == "date" and error_msg == "Input should be a valid date or datetime, month value is outside expected range of 1-12":
+            some_error = "Месяц находится вне диапазоне 1-12" 
+        elif error_type == "date_from_datetime_parsing" and error_field == "date" and error_msg == "Input should be a valid date or datetime, day value is outside expected range":
+            some_error = "День находится вне диапазона месяца"
+        elif error_type == "string_too_short" and error_msg == "String should have at least 5 characters":
+            some_error = f"Длина поля {error_field} должна быть более 5 символов"
+        elif error_type == "value_error":
+            some_error = str(error_ctx)
+        else:
+            some_error = error_msg
+
+        print({
+            "error_type": error_type, 
+            "error_field": error_field,
+            "error_msg": error_msg,
+            "error_ctx": error_ctx
+        })
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=some_error
+        )
+    except ValidationError as e:
+        # Выводим все ошибки валидации
+        print("Ошибка валидации:")
+        for error in e.errors():
+            print(f"Поле: {error['loc'][0]}, Ошибка: {error['msg']}")
+    except ValidationError:
+        raise
+    except HTTPException as http_ex:
+        raise http_ex
+    except Exception as ex:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(ex)
+        )
 
 
 if __name__ == "__main__":

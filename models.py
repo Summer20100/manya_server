@@ -1,14 +1,36 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from database import Base
 
-# Модель пользователя
-class User(Base):
-    __tablename__ = "users"
+# Модель клиента
+class Client(Base):
+    __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=False)
+    phone = Column(String, unique=True, nullable=False)
+
+    # Связь с заказами, при удалении Client, удаляется Order
+    orders = relationship("Order", back_populates="client", cascade="all, delete")
+
+
+# Модель заказа
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    adres = Column(String, nullable=False)
+    comment = Column(String, default="")
+    is_active = Column(Boolean, default=True)
+    date = Column(Date, nullable=False)
+    
+
+    # Связи
+    client = relationship("Client", back_populates="orders")
+    product = relationship("Product", back_populates="orders")
+
 
 # Модель категории
 class Category(Base):
@@ -17,6 +39,10 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, unique=True, nullable=False)
     description = Column(String, default="")
+
+    # Связь с продуктами, при удалении Category обновляются поля в Product
+    products = relationship("Product", back_populates="category", cascade="all", passive_deletes=True)
+
 
 # Модель продукта
 class Product(Base):
@@ -28,12 +54,11 @@ class Product(Base):
     price_for_itm = Column(Numeric(10, 2), default=0)
     weight_for_itm = Column(Numeric(10, 2), default=0)
 
-    is_active = Column(Boolean, default=True)
-    category_id = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=False)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
 
-    # __table_args__ = (
-    #     CheckConstraint(price_for_itm >= 0, name="Стоимость не может быть меньше 0"),
-    #     CheckConstraint(weight_for_itm >= 0, name="Вес не может быть меньше 0"),
-    #     CheckConstraint("price_for_itm ~ '^(?!0\\d)(\\d+(\\.\\d{1,2})?)$'", name="Стоимость должна быть в формате 00.00"),
-    #     CheckConstraint("weight_for_itm ~ '^(?!0\\d)(\\d+(\\.\\d{1,2})?)$'", name="Вес должн быть в формате 00.00"),
-    # )
+    # Связи
+    category = relationship("Category", back_populates="products")
+    orders = relationship("Order", back_populates="product", cascade="all, delete")
+
+
