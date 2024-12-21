@@ -53,6 +53,8 @@ class ProductControllers:
             new_product = Product(
                 title = product.title, 
                 description = product.description,
+                img_URL=product.img_URL,
+                img_title=product.img_title,
                 price_for_itm = product.price_for_itm,
                 weight_for_itm = product.weight_for_itm,
                 is_active = product.is_active,
@@ -126,6 +128,8 @@ class ProductControllers:
                 )
             existing_product.title = product.title
             existing_product.description = product.description
+            existing_product.img_URL=product.img_URL
+            existing_product.img_title=product.img_title
             existing_product.price_for_itm = product.price_for_itm
             existing_product.weight_for_itm = product.weight_for_itm
             existing_product.is_active = product.is_active

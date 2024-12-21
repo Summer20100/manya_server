@@ -14,7 +14,12 @@ import config
 class CategoryControllers: 
     async def create_category(category: CategoryBase, db: AsyncSession):
         try:
-            new_category = Category(title=category.title, description=category.description)
+            new_category = Category(
+                title=category.title,
+                description=category.description,
+                img_URL=category.img_URL,
+                img_title=category.img_title
+            )
             db.add(new_category)
             await db.commit()
             return { "message": "Категория добавлена успешно" }
@@ -91,6 +96,8 @@ class CategoryControllers:
             if existing_category:
                 existing_category.title = category.title
                 existing_category.description = category.description
+                existing_category.img_URL=category.img_URL,
+                existing_category.img_title=category.img_title
                 await db.commit()
                 return {"message": "Категория обновлена успешно"}
             else:

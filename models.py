@@ -39,6 +39,8 @@ class Category(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, unique=True, nullable=False)
     description = Column(String, default="")
+    img_URL = Column(String, default="")
+    img_title = Column(String, default="")
 
     # Связь с продуктами, при удалении Category обновляются поля в Product
     products = relationship("Product", back_populates="category", cascade="all", passive_deletes=True)
@@ -51,6 +53,8 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, unique=True, nullable=False)
     description = Column(String, default="")
+    img_URL = Column(String, default="")
+    img_title = Column(String, default="")
     price_for_itm = Column(Numeric(10, 2), default=0)
     weight_for_itm = Column(Numeric(10, 2), default=0)
 

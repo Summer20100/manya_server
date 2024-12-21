@@ -19,6 +19,8 @@ class Client(ClientBase):
 class CategoryBase(BaseModel):
     title: str
     description: Optional[str] = ""
+    img_URL: Optional[str] = ""
+    img_title: Optional[str] = ""
 
 class Category(CategoryBase):
     id: int
@@ -31,6 +33,8 @@ class Category(CategoryBase):
 class ProductBase(BaseModel):
     title: str
     description: Optional[str] = ""
+    img_URL: Optional[str] = ""
+    img_title: Optional[str] = ""
     price_for_itm:  Optional[float] = 0
     weight_for_itm: Optional[float] = 0
     
@@ -72,7 +76,7 @@ class OrderBase(BaseModel):
     comment: Optional[str] = Field(
         None, 
         min_length=5, 
-        max_length=100, 
+        max_length=100,
         description="Комментарии к заказу"
     )
     is_active: Optional[bool] = Field(
