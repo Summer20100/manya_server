@@ -96,7 +96,7 @@ class CategoryControllers:
             if existing_category:
                 existing_category.title = category.title
                 existing_category.description = category.description
-                existing_category.img_URL=category.img_URL,
+                existing_category.img_URL=category.img_URL
                 existing_category.img_title=category.img_title
                 await db.commit()
                 return {"message": "Категория обновлена успешно"}
