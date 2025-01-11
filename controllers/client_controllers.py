@@ -17,12 +17,18 @@ class ClientControllers:
             new_client = Client(name=client.name, phone=client.phone)
             db.add(new_client)
             await db.commit()
-            return { "message": "Клиент добавлен успешно" }
+            return {"message": "Клиент добавлен успешно"}
         except IntegrityError as e:
-            conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Клиент с таким phone уже существует")        
+            # Проверка на уникальность phone
+            error_message = str(e.orig) if hasattr(e, 'orig') else "Произошла ошибка базы данных"
+            if "unique constraint" in error_message.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Клиент с таким номером телефона уже существует"
+                )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=conflict_detail
+                detail="Ошибка при добавлении клиента"
             )
         except Exception as e:
             logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
@@ -30,25 +36,6 @@ class ClientControllers:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Произошла непредвиденная ошибка"
             )
-            
-    # async def get_users(key: str, db: AsyncSession):
-    #     try:
-    #         result = await db.execute(select(User).order_by(asc(User.id)))
-    #         users = result.scalars().all()
-    #         if key != config.key:
-    #             raise HTTPException(
-    #                 status_code=status.HTTP_403_FORBIDDEN,
-    #                 detail="Доступ запрещён. Введён неправильный код"
-    #             )
-    #         return users
-    #     except HTTPException as http_ex:
-    #         raise http_ex
-    #     except Exception as e:
-    #         logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
-    #         raise HTTPException(
-    #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #             detail="Произошла непредвиденная ошибка"
-    #         )
     
     async def get_clients(db: AsyncSession):
         try:
