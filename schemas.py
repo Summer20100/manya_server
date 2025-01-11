@@ -1,5 +1,6 @@
 from pydantic import BaseModel, field_validator, ValidationError, Field
 from datetime import date
+from datetime import datetime
 from typing import Optional
 
 # Клиент
@@ -72,6 +73,11 @@ class Product(ProductBase):
 class OrderBase(BaseModel):
     client_id: int
     product_id: int
+    
+    quantity: Optional[int] = 1
+    total_price: Optional[float] = 1
+    total_weight: Optional[float] = 1
+    
     adres: str = Field(..., min_length=5, max_length=100, description="Адрес доставки")
     comment: Optional[str] = Field(
         None, 
@@ -84,6 +90,9 @@ class OrderBase(BaseModel):
         description="Активность заказа"
     )
     date: date
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
 
     @field_validator("date")
     def validate_date(cls, value):
@@ -96,6 +105,22 @@ class OrderBase(BaseModel):
         if value not in [True, False]:
             raise ValueError("Поле is_active должно быть булевым значением (True или False)")
         return value
+    
+    @field_validator("total_price")
+    def validate_price(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None:
+            price_str = f"{v:.2f}"
+            if price_str.startswith('0') and len(price_str) > 1 and price_str[1].isdigit():
+                raise ValueError("Стоимость не может начинаться с '0' или быть в формате '00,00'")
+        return v
+    
+    @field_validator("total_weight")
+    def validate_weight(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None:
+            weight_str = f"{v:.2f}"
+            if weight_str.startswith('0') and len(weight_str) > 1 and weight_str[1].isdigit():
+                raise ValueError("Вес не может начинаться с '0' или быть в формате '00,00'")
+        return v
 
 class Order(OrderBase):
     id: int
