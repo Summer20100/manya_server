@@ -42,9 +42,12 @@ class Category(Base):
     img_URL = Column(String, default="")
     img_title = Column(String, default="")
 
-    # Связь с продуктами
-    products = relationship("Product", back_populates="category", passive_deletes=True)
-
+    # Связь с продуктами, при удалении Category обновляется поле category_id в Product
+    products = relationship(
+        "Product", 
+        back_populates="category", 
+        passive_deletes=True
+    )
 
 
 # Модель продукта
@@ -60,9 +63,12 @@ class Product(Base):
     weight_for_itm = Column(Numeric(10, 2), default=0)
 
     is_active = Column(Boolean, default=False)
-    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    category_id = Column(
+        Integer, 
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True
+    )
 
-    # Связь
+    # Связи
     category = relationship("Category", back_populates="products")
-
-
+    orders = relationship("Order", back_populates="product", cascade="all, delete")
