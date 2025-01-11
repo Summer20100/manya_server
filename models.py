@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, Date, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from database import Base
 
 # Модель клиента
@@ -10,7 +11,7 @@ class Client(Base):
     name = Column(String, nullable=False)
     phone = Column(String, unique=True, nullable=False)
 
-    # Связь с заказами, при удалении Client, удаляется Order
+    # Связь с заказами
     orders = relationship("Order", back_populates="client", cascade="all, delete")
 
 
@@ -21,16 +22,19 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+    total_price = Column(Numeric(10, 2), nullable=False, default=1)
+    total_weight = Column(Numeric(10, 2), nullable=False, default=1)
     adres = Column(String, nullable=False)
     comment = Column(String, default="")
     is_active = Column(Boolean, default=True)
     date = Column(Date, nullable=False)
-    
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
 
     # Связи
     client = relationship("Client", back_populates="orders")
     product = relationship("Product", back_populates="orders")
-
 
 # Модель категории
 class Category(Base):
