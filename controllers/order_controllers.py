@@ -21,6 +21,9 @@ class OrderControllers:
             new_order = Order(
                 client_id = order.client_id,
                 product_id = order.product_id,
+                quantity = order.quantity,
+                total_price = order.total_price,
+                total_weight = order.total_weight,
                 adres = order.adres,
                 comment = order.comment,
                 is_active = order.is_active,
@@ -110,23 +113,25 @@ class OrderControllers:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Заказ не найден"
                 )
-                
             existing_order.client_id = order.client_id
             existing_order.product_id = order.product_id
+            existing_order.quantity = order.quantity
+            existing_order.total_price = order.total_price
+            existing_order.total_weight = order.total_weight
             existing_order.adres = order.adres
             existing_order.comment = order.comment
             existing_order.is_active = order.is_active
             existing_order.date = order.date
 
             await db.commit()
-            return {"message": "Продукт обновлен успешно"}
+            return {"message": "Заказ обновлен успешно"}
 
         except IntegrityError as e:
             error_code = getattr(e.orig, 'pgcode', None)
             if error_code == "23503":
-                detail = "Категории ID не найдено"
+                detail = "Заказ ID не найдено"
             elif error_code == "23505":
-                detail = "Продукт с таким названием уже существует"
+                detail = "Заказ с таким названием уже существует"
             else:
                 detail = "Произошла непредвиденная ошибка"
             raise HTTPException(
