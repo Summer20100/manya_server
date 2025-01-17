@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from database import init_db, get_db, app
-from schemas import Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order, PhotoBase, Photo
+from schemas import Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order, PhotoBase, Photo, PhotoForUpdate
 from models import Client as ClientModel, Category as CategoryModel, Product as ProductModel
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
@@ -319,14 +319,14 @@ async def get_photos(db: AsyncSession = Depends(get_db)):
 async def get_photo_by_ID(id: int, db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.get_photo_by_id(id, db)
 
-# @app.put(
-#     "/photos/{id}",
-#     status_code=status.HTTP_200_OK, 
-#     description="Обновить фото по ID",
-#     tags=["Photos"]
-# )
-# async def update_order(id: int, photo: PhotoBase, db: AsyncSession = Depends(get_db)):
-#     return await PhotoControllers.update_photo(id, photo, db)
+@app.put(
+    "/photos/{id}",
+    status_code=status.HTTP_200_OK, 
+    description="Обновить фото по ID",
+    tags=["Photos"]
+)
+async def update_order(id: int, photo_update: PhotoForUpdate, db: AsyncSession = Depends(get_db)):
+    return await PhotoControllers.update_photo(id, photo_update, db)
 
 @app.delete(
     "/photos/{id}",
@@ -336,6 +336,7 @@ async def get_photo_by_ID(id: int, db: AsyncSession = Depends(get_db)):
 )
 async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.del_photo(id, db)
+
 
 
 

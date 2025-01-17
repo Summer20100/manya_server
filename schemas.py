@@ -132,10 +132,10 @@ class Order(OrderBase):
 # Фото
     
 class PhotoBase(BaseModel):
-    title: str = Field(..., min_length=5, max_length=100, description="Описание фото")
-    filename: str
-    content_type: str
-    data: str
+    title: str = Field(..., min_length=5, max_length=100, description="Название фото")
+    filename: str = Field(..., description="Имя файла изображения")
+    content_type: str = Field(..., description="Тип содержимого (например, image/png)")
+    data: str = Field(..., description="Данные изображения в формате base64")
 
     class Config:
         from_attributes = True
@@ -147,3 +147,11 @@ class Photo(PhotoBase):
     class Config:
         from_attributes = True
         orm_mode = True
+
+class PhotoForUpdate(BaseModel):
+    title: str = Field(..., min_length=5, max_length=100, description="Название фото")
+
+    class Config:
+        from_attributes = True
+        orm_mode = True
+    

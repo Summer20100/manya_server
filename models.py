@@ -81,8 +81,8 @@ class Product(Base):
 class Photo(Base):
     __tablename__ = "photos"
 
-    id = Column(Integer, primary_key=True, index=True)  # Уникальный идентификатор
+    id = Column(Integer, primary_key=True, index=True)
     title = Column(String, unique=True, nullable=False)
-    filename = Column(String, nullable=False)  # Имя файла изображения
-    content_type = Column(String, nullable=False)  # Тип содержимого (например, image/png)
-    data = Column(LargeBinary, nullable=False)  # Данные изображения в бинарном формате
+    filename = Column(String, nullable=False)
+    content_type = Column(String, nullable=False)
+    data = Column(LargeBinary, nullable=False)

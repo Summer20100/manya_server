@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from database import init_db, get_db
-from schemas import PhotoBase
+from schemas import PhotoBase, PhotoForUpdate
 from models import Photo
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
@@ -113,35 +113,39 @@ class PhotoControllers:
                 detail="Произошла непредвиденная ошибка"
             )
     
-    # async def update_photo(id: int, client: PhotoBase, db: AsyncSession):
-    #     try:
-    #         result = await db.execute(select(Client).filter(Client.id == id))
-    #         existing_client = result.scalars().first()
-    #         if existing_client:
-    #             existing_client.name = client.name
-    #             existing_client.phone = client.phone
-    #             await db.commit()
-    #             return {"message": "Данные клиента обновлены успешно"}
-    #         else:
-    #             raise HTTPException(
-    #                 status_code=status.HTTP_404_NOT_FOUND,
-    #                 detail="Клиент не найден"
-    #             )
-    #     except HTTPException as http_ex:
-    #         raise http_ex
-    #     except IntegrityError as e:
-    #         conflict_detail = getattr(e.orig, 'diag', {}).get('message_detail', "Клиент с таким phone уже существует")        
-    #         raise HTTPException(
-    #             status_code=status.HTTP_400_BAD_REQUEST,
-    #             detail=conflict_detail
-    #         )
-    #     except Exception as e:
-    #         logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
-    #         raise HTTPException(
-    #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #             detail="Произошла непредвиденная ошибка"
-    #         )
-        
+    async def update_photo(id: int, photo_update: PhotoForUpdate, db: AsyncSession):
+        try:
+            # Получение существующей фотографии из базы данных
+            result = await db.execute(select(Photo).filter(Photo.id == id))
+            existing_photo = result.scalars().first()
+
+            if existing_photo:
+                # Обновление только названия
+                existing_photo.title = photo_update.title
+
+                # Сохранение изменений
+                await db.commit()
+                return {"message": "Название фото обновлено успешно"}
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Фото не найдено"
+                )
+        except IntegrityError as e:
+            logging.error(f"Ошибка целостности данных при обновлении названия фото: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Фото с таким названием уже существует"
+            )
+        except HTTPException as http_ex:
+            raise http_ex
+        except Exception as e:
+            logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Произошла непредвиденная ошибка"
+            )
+      
     async def del_photo(id: int, db: AsyncSession):
         try:
             result = await db.execute(select(Photo).filter(Photo.id == id))
