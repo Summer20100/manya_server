@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, Date, DateTime
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, ForeignKey, Date, DateTime, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -76,3 +76,13 @@ class Product(Base):
     # Связи
     category = relationship("Category", back_populates="products")
     orders = relationship("Order", back_populates="product", cascade="all, delete")
+    
+# Модель фотографии
+class Photo(Base):
+    __tablename__ = "photos"
+
+    id = Column(Integer, primary_key=True, index=True)  # Уникальный идентификатор
+    title = Column(String, unique=True, nullable=False)
+    filename = Column(String, nullable=False)  # Имя файла изображения
+    content_type = Column(String, nullable=False)  # Тип содержимого (например, image/png)
+    data = Column(LargeBinary, nullable=False)  # Данные изображения в бинарном формате

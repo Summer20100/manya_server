@@ -2,6 +2,7 @@ from pydantic import BaseModel, field_validator, ValidationError, Field
 from datetime import date
 from datetime import datetime
 from typing import Optional
+import base64
 
 # Клиент
  
@@ -126,4 +127,23 @@ class Order(OrderBase):
     id: int
     
     class Config:
+        orm_mode = True
+        
+# Фото
+    
+class PhotoBase(BaseModel):
+    title: str = Field(..., min_length=5, max_length=100, description="Описание фото")
+    filename: str
+    content_type: str
+    data: str
+
+    class Config:
+        from_attributes = True
+        orm_mode = True
+
+class Photo(PhotoBase):
+    id: int
+
+    class Config:
+        from_attributes = True
         orm_mode = True

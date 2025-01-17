@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, Form, File
 from pydantic import BaseModel, FieldValidationInfo, field_validator, ValidationError
 import re
 from fastapi import Request
@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from database import init_db, get_db, app
-from schemas import Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order
+from schemas import Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order, PhotoBase, Photo
 from models import Client as ClientModel, Category as CategoryModel, Product as ProductModel
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
@@ -16,6 +16,7 @@ from controllers.client_controllers import ClientControllers
 from controllers.category_controllers import CategoryControllers
 from controllers.product_controllers import ProductControllers
 from controllers.order_controllers import OrderControllers
+from controllers.photo_controllers import PhotoControllers
 import os
 import logging
 import uvicorn
@@ -240,6 +241,7 @@ async def add_order(order: OrderBase, db: AsyncSession = Depends(get_db)):
 async def get_orders(db: AsyncSession = Depends(get_db)):
     return await OrderControllers.get_orders(db)
 
+
 @app.get(
     "/orders/{id}", 
     response_model=Order, 
@@ -249,7 +251,6 @@ async def get_orders(db: AsyncSession = Depends(get_db)):
 )
 async def get_order_by_ID(id: int, db: AsyncSession = Depends(get_db)):
     return await OrderControllers.get_order_by_id(id, db)
-
 
 @app.put(
     "/orders/{id}", 
@@ -268,6 +269,74 @@ async def update_order(id: int, order: OrderBase, db: AsyncSession = Depends(get
 )
 async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
     return await OrderControllers.del_order(id, db)
+
+# Фотографии
+
+# @app.post(
+#     "/photos", 
+#     status_code=status.HTTP_201_CREATED, 
+#     description="Добавить новое фото",
+#     tags=["Photos"]
+# )
+# async def add_photo(
+#     title: str = Form(...),  # Получаем текстовое поле через Form
+#     file: UploadFile = Depends(),  # Получаем файл через UploadFile
+#     db: AsyncSession = Depends(get_db)  # Получаем сессию базы данных
+# ):
+#     return await PhotoControllers.add_photo(title, file, db)
+
+
+@app.post(
+    "/photos", 
+    status_code=status.HTTP_201_CREATED, 
+    description="Добавить новое фото",
+    tags=["Photos"]
+)
+async def upload_file(
+    title: str = Form(...),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db)
+):
+    return await PhotoControllers.add_photo(title, file, db)
+
+@app.get(
+    "/photos", 
+    response_model=List[Photo], 
+    status_code=status.HTTP_200_OK, 
+    description="Получить все фото",
+    tags=["Photos"]
+)
+async def get_photos(db: AsyncSession = Depends(get_db)):
+    return await PhotoControllers.get_photos(db)
+
+@app.get(
+    "/photos/{id}", 
+    response_model=Photo, 
+    status_code=status.HTTP_200_OK, 
+    description="Получить фото по ID",
+    tags=["Photos"]
+)
+async def get_photo_by_ID(id: int, db: AsyncSession = Depends(get_db)):
+    return await PhotoControllers.get_photo_by_id(id, db)
+
+# @app.put(
+#     "/photos/{id}",
+#     status_code=status.HTTP_200_OK, 
+#     description="Обновить фото по ID",
+#     tags=["Photos"]
+# )
+# async def update_order(id: int, photo: PhotoBase, db: AsyncSession = Depends(get_db)):
+#     return await PhotoControllers.update_photo(id, photo, db)
+
+@app.delete(
+    "/photos/{id}",
+    status_code=status.HTTP_200_OK, 
+    description="Удалить фото по ID",
+    tags=["Photos"]
+)
+async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
+    return await PhotoControllers.del_photo(id, db)
+
 
 
 @app.exception_handler(RequestValidationError)
