@@ -1,18 +1,26 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 import config
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
-# Строка подключения
-SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{config.user}:{config.password}@{config.host}:{config.port}/{config.dbname}"
+# Строка подключения к БД
+SQLALCHEMY_DATABASE_URL = (
+    f"postgresql+asyncpg://{config.user}:{config.password}@{config.host}:{config.port}/{config.dbname}"
+)
 
-# Создание асинхронного движка
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+# Создание асинхронного движка с параметрами пула
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL,
+    echo=True,
+    pool_size=30,       # Максимальное количество соединений
+    max_overflow=50,    # Максимальный размер очереди соединений
+    pool_recycle=1800,  # Закрытие неактивных соединений (30 минут)
+    pool_pre_ping=True  # Проверка соединения перед использованием
+)
 
-# Сессия для работы с БД
+# Фабрика сессий
 SessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
@@ -27,27 +35,29 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-# Получение сессии БД
+# Зависимость для получения сессии БД
 async def get_db():
     async with SessionLocal() as db:
-        yield db
+        try:
+            yield db
+        finally:
+            await db.close()
 
+# Контекст жизненного цикла приложения
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
-    print("Shutdown process")
+    await engine.dispose()  # Закрытие соединений при завершении
 
+# Создание FastAPI-приложения
 app = FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost:5173/",
-]
-
+# Настройки CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],  # Разрешённые источники
-    allow_credentials=True,  # Разрешить отправку cookie
-    allow_methods=["*"],  # Разрешённые методы (GET, POST и т.д.)
-    allow_headers=["*"],  # Разрешённые заголовки
+    allow_origins=["*"],  # Разрешённые источники
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
