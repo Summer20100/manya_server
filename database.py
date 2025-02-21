@@ -54,10 +54,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Настройки CORS
-app.add_middleware(
+""" app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Разрешённые источники
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+) """
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # ✅ Указываем конкретный origin
+    allow_credentials=True,  # ✅ Разрешаем передачу credentials (cookies, токены)
+    allow_methods=["*"],  # Разрешаем все методы (GET, POST, PUT, DELETE)
+    allow_headers=["*"],  # Разрешаем все заголовки
 )

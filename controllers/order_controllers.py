@@ -19,7 +19,8 @@ class OrderControllers:
     async def create_order(order: OrderBase, db: AsyncSession):
         try:
             new_order = Order(
-                client_id = order.client_id,
+                client_phone = order.client_phone,
+                client_name = order.client_name,
                 product_id = order.product_id,
                 quantity = order.quantity,
                 total_price = order.total_price,
@@ -113,7 +114,8 @@ class OrderControllers:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Заказ не найден"
                 )
-            existing_order.client_id = order.client_id
+            existing_order.client_phone = order.client_phone
+            existing_order.client_name = order.client_name
             existing_order.product_id = order.product_id
             existing_order.quantity = order.quantity
             existing_order.total_price = order.total_price

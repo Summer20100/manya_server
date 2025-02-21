@@ -7,8 +7,20 @@ import base64
 # Клиент
  
 class ClientBase(BaseModel):
-    name: str
-    phone: str
+    name: str = Field(
+        ..., 
+        min_length=3, 
+        max_length=25,
+        title="Телефон клиента",
+        description="Контактный номер клиента в международном формате (+7xxxxxxxxxx)."
+    )
+    phone: str = Field(
+        ..., 
+        min_length=12, 
+        max_length=16,
+        title="Имя клиента",
+        description="Имя клиента (от 3 до 25 символов)."
+    )
 
 class Client(ClientBase):
     id: int
@@ -72,20 +84,43 @@ class Product(ProductBase):
 # Заказ
 
 class OrderBase(BaseModel):
-    client_id: int
+    """ client_id: int """
+    client_phone: str = Field(
+        ..., 
+        min_length=12, 
+        max_length=16,  # Ограничим длину номера телефона
+        title="Телефон клиента",
+        description="Контактный номер клиента в международном формате (+7xxxxxxxxxx)."
+    )
+
+    client_name: str = Field(
+        ..., 
+        min_length=3, 
+        max_length=25,  # Ограничим длину имени
+        title="Имя клиента",
+        description="Имя клиента (от 3 до 25 символов)."
+    )
+    
     product_id: int
     
     quantity: Optional[int] = 1
     total_price: Optional[float] = 1
     total_weight: Optional[float] = 1
     
-    adres: str = Field(..., min_length=5, max_length=100, description="Адрес доставки")
-    comment: Optional[str] = Field(
-        None, 
-        min_length=5, 
+    adres: Optional[str] = Field(
+        None,
         max_length=100,
-        description="Комментарии к заказу"
+        title="Адрес доставки",
+        description="Укажите адрес, куда будет доставлен заказ (необязательно)."
     )
+
+    comment: Optional[str] = Field(
+        None,
+        max_length=100,
+        title="Комментарий к заказу",
+        description="Дополнительная информация по заказу (необязательно)."
+    )
+
     is_active: Optional[bool] = Field(
         True,
         description="Активность заказа"
@@ -93,6 +128,20 @@ class OrderBase(BaseModel):
     date: date
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    
+    @field_validator("client_phone")
+    @classmethod
+    def validate_client_phone(cls, value: str) -> str:
+        if len(value) < 12 or len(value) > 16:
+            raise ValueError("Длина номера телефона должна быть от 12 до 16 цифр")      
+        return value
+    
+    @field_validator("client_name")
+    @classmethod
+    def validate_client_name(cls, value: str) -> str:
+        if len(value) < 3 or len(value) > 25:
+            raise ValueError("Длина номера телефона должна быть от 3 до 25 символов")      
+        return value
     
 
     @field_validator("date")
@@ -155,3 +204,45 @@ class PhotoForUpdate(BaseModel):
         from_attributes = True
         orm_mode = True
     
+
+# Пользователь
+
+class UserBase(BaseModel):
+    name: str = Field(..., min_length=3, max_length=16, description="Имя пользователя")
+    password: str = Field(..., min_length=6, max_length=16, description="Пароль пользователя")
+    
+    @field_validator("name")
+    def validate_name_length(cls, value: str) -> str:
+        if len(value) < 3 or len(value) > 16:
+            raise ValueError("Имя пользователя не менее 3 и не более 16 символов")
+        return value
+    
+    @field_validator("password")
+    def validate_password_length(cls, value: str) -> str:
+        if len(value) < 7 or len(value) > 16:
+            raise ValueError("Пароль не менее 7 и не более 16 символов")
+        return value
+
+    class Config:
+        orm_mode = True
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+        
+class UserRegister(BaseModel):
+    name: str
+    password: str
+
+class UserLogin(BaseModel):
+    name: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None

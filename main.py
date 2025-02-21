@@ -1,13 +1,16 @@
-from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, Form, File
-from pydantic import BaseModel, FieldValidationInfo, field_validator, ValidationError
-import re
+from fastapi import APIRouter, FastAPI, Response, HTTPException, Depends, status, UploadFile, Form, File
+from pydantic import ValidationError
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from asyncpg.exceptions import UniqueViolationError
+
+from fastapi.security import OAuth2PasswordBearer
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from contextlib import asynccontextmanager
 from database import init_db, get_db, app
-from schemas import Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order, PhotoBase, Photo, PhotoForUpdate
+from schemas import User, UserBase, UserLogin, UserRegister, Client, ClientBase, Category, CategoryBase, Product, ProductBase, OrderBase, Order, PhotoBase, Photo, PhotoForUpdate
 from models import Client as ClientModel, Category as CategoryModel, Product as ProductModel
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
@@ -17,18 +20,28 @@ from controllers.category_controllers import CategoryControllers
 from controllers.product_controllers import ProductControllers
 from controllers.order_controllers import OrderControllers
 from controllers.photo_controllers import PhotoControllers
+from controllers.user_controllers import UserControllers
 import os
+import config
 import logging
 import uvicorn
+from auth.access_token import verify_jwt_token
+
+# Создание роута
+
+router = APIRouter(prefix="/api/v1")
+verify = APIRouter(dependencies=[Depends(verify_jwt_token)])
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Создание таблиц если их не существует
 
 @app.on_event("startup")
 async def on_startup():
     await init_db()
-
+    
 # Приветствие
 
+""" @router.get( """
 @app.get(
     "/", 
     status_code=status.HTTP_200_OK, 
@@ -40,18 +53,33 @@ async def say_hallo():
 
 # Категории
 
-@app.post(
+@verify.post(
     "/categories", 
     status_code=status.HTTP_201_CREATED, 
     description="Добавить новую категорию",
     tags=["Categories"]
     )
-async def add_category(category: CategoryBase, db: AsyncSession = Depends(get_db)):
+async def add_category(
+    category: CategoryBase, 
+    db: AsyncSession = Depends(get_db)
+):
     return await CategoryControllers.create_category(category, db)
 
 # @app.get("/{key}/categories", response_model=List[Category], status_code=status.HTTP_200_OK, description="Получить все категории")
 # async def get_categories(key: Optional[str] = None, db: AsyncSession = Depends(get_db)):
 #     return await CategoryControllers.get_categories(key, db)
+
+""" @app.get(
+    "/categories", 
+    response_model=List[Category], 
+    status_code=status.HTTP_200_OK, 
+    description="Получить все категории",
+    tags=["Categories"]
+)
+async def get_categories(
+    db: AsyncSession = Depends(get_db)
+):
+    return await CategoryControllers.get_categories(db) """
 
 @app.get(
     "/categories", 
@@ -60,7 +88,10 @@ async def add_category(category: CategoryBase, db: AsyncSession = Depends(get_db
     description="Получить все категории",
     tags=["Categories"]
 )
-async def get_categories(db: AsyncSession = Depends(get_db)):
+async def get_categories(
+    # username: str = Depends(verify_jwt_token),
+    db: AsyncSession = Depends(get_db)
+):
     return await CategoryControllers.get_categories(db)
 
 @app.get(
@@ -73,7 +104,7 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
 async def get_category_by_ID(id: int, db: AsyncSession = Depends(get_db)):
     return await CategoryControllers.get_category_by_id(id, db)
 
-@app.put(
+@verify.put(
     "/categories/{id}", 
     status_code=status.HTTP_200_OK, 
     description="Обновить категорию по ID",
@@ -82,7 +113,7 @@ async def get_category_by_ID(id: int, db: AsyncSession = Depends(get_db)):
 async def update_category(id: int, category: CategoryBase, db: AsyncSession = Depends(get_db)):
     return await CategoryControllers.update_category(id, category, db)
 
-@app.delete(
+@verify.delete(
     "/categories/{id}", 
     status_code=status.HTTP_200_OK, 
     description="Удалить категорию по ID",
@@ -91,32 +122,7 @@ async def update_category(id: int, category: CategoryBase, db: AsyncSession = De
 async def remove_category(id: int, db: AsyncSession = Depends(get_db)):
     return await CategoryControllers.del_category(id, db)
 
-# Продукты
-
-# async def validate_product(product):
-#     errors = []
-
-#     # Проверка стоимости
-#     if product.price_for_itm < 0:
-#         errors.append("Стоимость не может быть меньше 0")
-#     if not re.match(r'^(?!0\d)(\d+(\.\d{1,2})?)$', str(product.price_for_itm)):
-#         errors.append("Стоимость должна быть в формате 00.00")
-
-#     # Проверка веса
-#     if product.weight_for_itm < 0:
-#         errors.append("Вес не может быть меньше 0")
-#     if not re.match(r'^(?!0\d)(\d+(\.\d{1,2})?)$', str(product.weight_for_itm)):
-#         errors.append("Вес должен быть в формате 00.00")
-
-#     if errors:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail={"kvflk.fl oioi,srti rosijv,ro"}
-#         )
-
-#     return "Проверка прошла успешно"
-
-@app.post(
+@verify.post(
     "/products", 
     status_code=status.HTTP_201_CREATED, 
     description="Добавить новый продукт",
@@ -124,10 +130,6 @@ async def remove_category(id: int, db: AsyncSession = Depends(get_db)):
 )
 async def add_product(product: ProductBase, db: AsyncSession = Depends(get_db)):
     return await ProductControllers.create_product(product, db)
-
-# @app.get("/{key}/categories", response_model=List[Category], status_code=status.HTTP_200_OK, description="Получить все категории")
-# async def get_categories(key: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-#     return await CategoryControllers.get_categories(key, db)
 
 @app.get(
     "/products", 
@@ -140,7 +142,7 @@ async def get_products(db: AsyncSession = Depends(get_db)):
     return await ProductControllers.get_products(db)
 
 @app.get(
-    "/products/{id}", 
+    "/products/{id}",
     response_model=Product, 
     status_code=status.HTTP_200_OK, 
     description="Получить продукт по ID",
@@ -149,7 +151,7 @@ async def get_products(db: AsyncSession = Depends(get_db)):
 async def get_product_by_ID(id: int, db: AsyncSession = Depends(get_db)):
     return await ProductControllers.get_product_by_id(id, db)
 
-@app.put(
+@verify.put(
     "/products/{id}", 
     status_code=status.HTTP_200_OK, 
     description="Обновить продукт по ID",
@@ -158,7 +160,7 @@ async def get_product_by_ID(id: int, db: AsyncSession = Depends(get_db)):
 async def update_product(id: int, product: ProductBase, db: AsyncSession = Depends(get_db)):
     return await ProductControllers.update_product(id, product, db)
 
-@app.delete(
+@verify.delete(
     "/products/{id}", 
     status_code=status.HTTP_200_OK, 
     description="Удалить продукт по ID",
@@ -172,17 +174,13 @@ async def remove_product(id: int, db: AsyncSession = Depends(get_db)):
 @app.post(
     "/clients", 
     status_code=status.HTTP_201_CREATED, 
-    description="Добавить нового клиента", 
+    description="Добавить нового клиента",
     tags=["Clients"]
 )
 async def add_client(client: ClientBase, db: AsyncSession = Depends(get_db)):
     return await ClientControllers.create_client(client, db)
 
-# @app.get("/{key}/users", response_model=List[User], status_code=status.HTTP_200_OK, description="Получить всех пользователей")
-# async def get_users(key: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-#     return await UserControllers.get_users(key, db)
-
-@app.get(
+@verify.get(
     "/clients", 
     response_model=List[Client], 
     status_code=status.HTTP_200_OK, 
@@ -192,7 +190,7 @@ async def add_client(client: ClientBase, db: AsyncSession = Depends(get_db)):
 async def get_clients(db: AsyncSession = Depends(get_db)):
     return await ClientControllers.get_clients(db)
 
-@app.get(
+@verify.get(
     "/clients/{id}", 
     response_model=Client, 
     status_code=status.HTTP_200_OK, 
@@ -231,18 +229,18 @@ async def remove_client(id: int, db: AsyncSession = Depends(get_db)):
 async def add_order(order: OrderBase, db: AsyncSession = Depends(get_db)):
     return await OrderControllers.create_order(order, db)
 
-@app.get(
+@verify.get(
     "/orders", 
     response_model=List[Order], 
     status_code=status.HTTP_200_OK, 
     description="Получить все заказы",
-     tags=["Orders"]    
+     tags=["Orders"]
 )
 async def get_orders(db: AsyncSession = Depends(get_db)):
     return await OrderControllers.get_orders(db)
 
 
-@app.get(
+@verify.get(
     "/orders/{id}", 
     response_model=Order, 
     status_code=status.HTTP_200_OK, 
@@ -252,7 +250,7 @@ async def get_orders(db: AsyncSession = Depends(get_db)):
 async def get_order_by_ID(id: int, db: AsyncSession = Depends(get_db)):
     return await OrderControllers.get_order_by_id(id, db)
 
-@app.put(
+@verify.put(
     "/orders/{id}", 
     status_code=status.HTTP_200_OK, 
     description="Обновить заказ по ID",
@@ -261,7 +259,7 @@ async def get_order_by_ID(id: int, db: AsyncSession = Depends(get_db)):
 async def update_order(id: int, order: OrderBase, db: AsyncSession = Depends(get_db)):
     return await OrderControllers.update_order(id, order, db)
 
-@app.delete(
+@verify.delete(
     "/orders/{id}", 
     status_code=status.HTTP_200_OK, 
     description="Удалить заказ по ID",
@@ -272,21 +270,7 @@ async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
 
 # Фотографии
 
-# @app.post(
-#     "/photos", 
-#     status_code=status.HTTP_201_CREATED, 
-#     description="Добавить новое фото",
-#     tags=["Photos"]
-# )
-# async def add_photo(
-#     title: str = Form(...),  # Получаем текстовое поле через Form
-#     file: UploadFile = Depends(),  # Получаем файл через UploadFile
-#     db: AsyncSession = Depends(get_db)  # Получаем сессию базы данных
-# ):
-#     return await PhotoControllers.add_photo(title, file, db)
-
-
-@app.post(
+@verify.post(
     "/photos", 
     status_code=status.HTTP_201_CREATED, 
     description="Добавить новое фото",
@@ -299,7 +283,7 @@ async def upload_file(
 ):
     return await PhotoControllers.add_photo(title, file, db)
 
-@app.get(
+@verify.get(
     "/photos", 
     response_model=List[Photo], 
     status_code=status.HTTP_200_OK, 
@@ -309,7 +293,7 @@ async def upload_file(
 async def get_photos(db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.get_photos(db)
 
-@app.get(
+@verify.get(
     "/photos/{id}", 
     response_model=Photo, 
     status_code=status.HTTP_200_OK, 
@@ -319,7 +303,7 @@ async def get_photos(db: AsyncSession = Depends(get_db)):
 async def get_photo_by_ID(id: int, db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.get_photo_by_id(id, db)
 
-@app.put(
+@verify.put(
     "/photos/{id}",
     status_code=status.HTTP_200_OK, 
     description="Обновить фото по ID",
@@ -328,7 +312,7 @@ async def get_photo_by_ID(id: int, db: AsyncSession = Depends(get_db)):
 async def update_order(id: int, photo_update: PhotoForUpdate, db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.update_photo(id, photo_update, db)
 
-@app.delete(
+@verify.delete(
     "/photos/{id}",
     status_code=status.HTTP_200_OK, 
     description="Удалить фото по ID",
@@ -338,7 +322,114 @@ async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.del_photo(id, db)
 
 
+# Доступ к приложению
 
+@app.post(
+    "/{reg_key}/register",
+    status_code=status.HTTP_201_CREATED, 
+    description="Добавить нового пользователя с reg_key",
+    tags=["Access"]
+)
+async def create_user(
+    reg_key: str,
+    user: UserRegister,
+    db: AsyncSession = Depends(get_db)
+):
+    if reg_key != config.regKey:
+        raise HTTPException(status_code=400, detail="Неверный регистрационный ключ")
+    
+    return await UserControllers.create_user(user, db)
+    
+@app.post(
+    "/login",
+    status_code=status.HTTP_200_OK, 
+    description="Войти в систему",
+    tags=["Access"]
+)
+async def login(
+    response: Response, 
+    user: UserLogin, 
+    db: AsyncSession = Depends(get_db)
+):
+    return await UserControllers.login(response, user, db)
+
+
+""" @app.get(
+    "/auth/validate",
+    status_code=status.HTTP_200_OK, 
+    description="Проверка валидности токена",
+    tags=["Access"]
+)
+async def validate_token(request: Request):
+    token = request.cookies.get("access_token")
+    if not token or not verify_jwt_token(token):
+        raise HTTPException(status_code=401, detail="Токен недействителен")
+    return {"valid": True} """
+
+@app.get(
+    "/auth/validate",
+    status_code=status.HTTP_200_OK,
+    description="Проверка валидности токена",
+    tags=["Access"]
+)
+async def validate_token(request: Request, token: str = Depends(oauth2_scheme)):
+    token_from_cookie = request.cookies.get("access_token")
+    final_token = token_from_cookie or token  # Берём токен из cookies или Authorization
+    if not final_token:
+        raise HTTPException(status_code=401, detail="Токен отсутствует")
+    username = verify_jwt_token(final_token)
+    return {"valid": True, "username": username}
+
+
+@verify.get(
+    "/protected",
+    status_code=status.HTTP_200_OK,
+    description="Войти в систему с авторизацией",
+    tags=["Access"]
+    )
+async def protected_route(username: str = Depends(verify_jwt_token)):
+    return {"message": f"Hello {username}, you are authorized!"}
+
+@verify.get(
+    "/users",
+    status_code=status.HTTP_200_OK,
+    description="Получить всех пользователей",
+    tags=["Access"]
+)
+async def get_users(db: AsyncSession = Depends(get_db)):   
+    return await UserControllers.get_users(db)
+
+@verify.get(
+    "/users/{id}",
+    response_model=UserLogin,
+    status_code=status.HTTP_200_OK, 
+    description="Получить пользователя по ID",
+    tags=["Access"]
+)
+async def get_user_by_ID(
+    id: int, 
+    db: AsyncSession = Depends(get_db)
+):   
+    return await UserControllers.get_user_by_id(id, db)
+
+@app.delete(
+    "/{del_key}/users/{id}",
+    status_code=status.HTTP_200_OK, 
+    description="Удалить пользователя по ID",
+    tags=["Access"]
+)
+async def remove_user(
+    del_key: str,
+    id: int, 
+    db: AsyncSession = Depends(get_db)
+):
+    if del_key != config.delKey:
+        raise HTTPException(
+            status_code=400, 
+            detail="Неверный ключ для удаления"
+        )
+
+    return await UserControllers.del_user(id, db)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -356,7 +447,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         elif error_ctx == "Expecting property name enclosed in double quotes":
             some_error = "Стоимость и/или вес продукта должны быть в формате 00.00"
         elif error_ctx == "Expecting value":
-            some_error = "Ошибка типа данных при отправлении запроса"   
+            some_error = "Ошибка типа данных при отправлении запроса"
+        elif error_ctx == "String should have at most 16 characters":
+            some_error = "Длина номера телефона должен быть не более 16 цифр"
             
         elif error_type == "date_from_datetime_parsing" and error_field == "date" and error_msg == "Input should be a valid date or datetime, month value is outside expected range of 1-12":
             some_error = "Месяц находится вне диапазоне 1-12" 
@@ -364,6 +457,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             some_error = "День находится вне диапазона месяца"
         elif error_type == "string_too_short" and error_msg == "String should have at least 5 characters":
             some_error = f"Длина поля {error_field} должна быть более 5 символов"
+        elif error_type == "string_too_long" and error_msg == "String should have at most 16 characters":
+            some_error = f"Длина поля {error_field} должна быть менее 17 символов"
+        elif error_type == "string_too_short" and error_msg == "String should have at least 12 characters":
+            some_error = f"Длина поля {error_field} должна быть более 12 символов"
+            
+        elif error_type == "string_too_long" and error_msg == "String should have at most 100 characters":
+            some_error = f"Длина поля {error_field} должна быть менее 100 символов"
+        elif error_type == "string_too_long" and error_msg == "String should have at most 25 characters":
+            some_error = f"Длина поля {error_field} должна быть менее 25 символов"
+        elif error_type == "string_too_short" and error_msg == "String should have at least 3 characters":
+            some_error = f"Длина поля {error_field} должна быть более 3 символов"
+            
         elif error_type == "value_error":
             some_error = str(error_ctx)
         else:
@@ -394,7 +499,37 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(ex)
         )
+        
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 401:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": "Вы не авторизованы для доступа к этому ресурсу"}
+        )
+    # Возвращаем стандартный обработчик для других ошибок
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
+@app.exception_handler(UniqueViolationError)
+async def handle_unique_violation_error(request, exc: UniqueViolationError):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"message": "Клиент с таким номером телефона уже существует"}
+    )
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail}
+    )
+        
+        
+app.include_router(router)
+app.include_router(verify, prefix="")
 
 
 if __name__ == "__main__":

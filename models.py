@@ -12,7 +12,7 @@ class Client(Base):
     phone = Column(String, unique=True, nullable=False)
 
     # Связь с заказами
-    orders = relationship("Order", back_populates="client", cascade="all, delete")
+    """ orders = relationship("Order", back_populates="client", cascade="all, delete") """
 
 
 # Модель заказа
@@ -20,7 +20,9 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    """ client_id = Column(Integer, ForeignKey("clients.id"), nullable=False) """
+    client_phone = Column(String, nullable=False)
+    client_name = Column(String, nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     quantity = Column(Integer, nullable=False, default=1)
     total_price = Column(Numeric(10, 2), nullable=False, default=1)
@@ -33,7 +35,7 @@ class Order(Base):
     updated_at = Column(DateTime, onupdate=func.now())
 
     # Связи
-    client = relationship("Client", back_populates="orders")
+    """ client = relationship("Client", back_populates="orders") """
     product = relationship("Product", back_populates="orders")
 
 # Модель категории
@@ -86,3 +88,12 @@ class Photo(Base):
     filename = Column(String, nullable=False)
     content_type = Column(String, nullable=False)
     data = Column(LargeBinary, nullable=False)
+    
+    
+# Модель пользователя
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, unique=True)
+    password = Column(String, nullable=False)
