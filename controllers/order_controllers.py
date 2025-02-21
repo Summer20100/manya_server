@@ -11,59 +11,76 @@ from models import Order
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import asc
-from typing import List
+from typing import List, Union
 import logging
 import config
 
 class OrderControllers: 
     async def create_order(order: OrderBase, db: AsyncSession):
-        try:
-            new_order = Order(
-                client_phone = order.client_phone,
-                client_name = order.client_name,
-                product_id = order.product_id,
-                quantity = order.quantity,
-                total_price = order.total_price,
-                total_weight = order.total_weight,
-                adres = order.adres,
-                comment = order.comment,
-                is_active = order.is_active,
-                date = order.date
-            )
-            db.add(new_order)
-            await db.commit()
-            return { "message": "Заказ добавлен успешно" }
-        except IntegrityError as e:
-            
-            error_code = getattr(e.orig, 'pgcode', None)
-            error_message = e.args[0]
-            
-            match = re.search(r"Key \((.*?)\)=\((.*?)\)", error_message)
-            
-            if match:
-                key = match.group(1)
-                value = match.group(2)
-            else:
-                print("Не удалось извлечь данные из сообщения об ошибке.")            
-            
-            if error_code == "23503":
-                detail = f"'{key}' с значением '{value}' не найдено"
-            elif error_code == "23505":
-                detail = "Заказ с таким названием уже существует"
-            else:
-                detail = "Произошла непредвиденная ошибка"
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail= detail
-            )
-        except HTTPException as http_ex:
-            raise http_ex
-        except Exception as e:
-            logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Произошла непредвиденная ошибка"
-            )
+        async def each_order(eachOrder: OrderBase):
+            try:
+                new_order = Order(
+                    client_phone=eachOrder.client_phone,
+                    client_name=eachOrder.client_name,
+                    product_id=eachOrder.product_id,
+                    quantity=eachOrder.quantity,
+                    total_price=eachOrder.total_price,
+                    total_weight=eachOrder.total_weight,
+                    adres=eachOrder.adres,
+                    comment=eachOrder.comment,
+                    is_active=eachOrder.is_active,
+                    date=eachOrder.date
+                )
+                db.add(new_order)
+                await db.commit()  # обязательно добавляем await
+                return {"message": "Заказ добавлен успешно"}
+            except IntegrityError as e:
+                error_code = getattr(e.orig, 'pgcode', None)
+                error_message = e.args[0]
+                
+                match = re.search(r"Key \((.*?)\)=\((.*?)\)", error_message)
+                if match:
+                    key = match.group(1)
+                    value = match.group(2)
+                else:
+                    print("Не удалось извлечь данные из сообщения об ошибке.")
+                
+                if error_code == "23503":
+                    detail = f"'{key}' с значением '{value}' не найдено"
+                elif error_code == "23505":
+                    detail = "Заказ с таким названием уже существует"
+                else:
+                    detail = "Произошла непредвиденная ошибка"
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=detail
+                )
+            except HTTPException as http_ex:
+                raise http_ex
+            except Exception as e:
+                logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Произошла непредвиденная ошибка"
+                )
+
+        # Если пришел одиночный заказ
+        if isinstance(order, OrderBase):
+            await each_order(order)
+            return {"message": "Заказ добавлен успешно"}
+
+        # Если пришел список заказов
+        elif isinstance(order, list):
+            for ord in order:
+                await each_order(ord)
+            return {"message": "Заказы добавлены успешно"}
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неверный формат данных"
+        )
+
+        
     
     async def get_orders(db: AsyncSession):
         try:

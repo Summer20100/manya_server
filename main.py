@@ -14,7 +14,7 @@ from schemas import User, UserBase, UserLogin, UserRegister, Client, ClientBase,
 from models import Client as ClientModel, Category as CategoryModel, Product as ProductModel
 from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
-from typing import List, Optional
+from typing import List, Optional, Union
 from controllers.client_controllers import ClientControllers
 from controllers.category_controllers import CategoryControllers
 from controllers.product_controllers import ProductControllers
@@ -226,7 +226,7 @@ async def remove_client(id: int, db: AsyncSession = Depends(get_db)):
     description="Добавить новый заказ",
     tags=["Orders"]
 )
-async def add_order(order: OrderBase, db: AsyncSession = Depends(get_db)):
+async def add_order(order: Union[OrderBase, List[OrderBase]], db: AsyncSession = Depends(get_db)):
     return await OrderControllers.create_order(order, db)
 
 @verify.get(

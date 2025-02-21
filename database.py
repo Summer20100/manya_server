@@ -64,7 +64,11 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173" , "https://marusina-sweets.vercel.app"],  # ✅ Указываем конкретный origin
+    allow_origins=[
+        "http://localhost:5173" , 
+        "http://localhost:5174" ,
+        "https://marusina-sweets.vercel.app"
+    ],  # ✅ Указываем конкретный origin
     allow_credentials=True,  # ✅ Разрешаем передачу credentials (cookies, токены)
     allow_methods=["*"],  # Разрешаем все методы (GET, POST, PUT, DELETE)
     allow_headers=["*"],  # Разрешаем все заголовки
