@@ -68,7 +68,8 @@ app.add_middleware(
         "http://localhost:5173" , 
         "http://localhost:5174" ,
         "https://marusina-sweets.vercel.app",
-        "https://marusina-sweets-admin.vercel.app"
+        "https://marusina-sweets-admin.vercel.app",
+        "https://marusina-sweets-dj9l.onrender.com"
     ],  # ✅ Указываем конкретный origin
     allow_credentials=True,  # ✅ Разрешаем передачу credentials (cookies, токены)
     allow_methods=["*"],  # Разрешаем все методы (GET, POST, PUT, DELETE)
