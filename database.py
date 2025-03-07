@@ -67,6 +67,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173" , 
         "http://localhost:5174" ,
+        "http://localhost:5175" ,
         "https://marusina-sweets.vercel.app",
         "https://marusina-sweets-admin.vercel.app",
         "https://marusina-sweets-dj9l.onrender.com"
