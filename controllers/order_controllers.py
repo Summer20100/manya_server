@@ -1,5 +1,7 @@
 from fastapi import HTTPException, status
 from pydantic import BaseModel, FieldValidationInfo, field_validator, ValidationError
+from fastapi.responses import JSONResponse
+from WebSocket.ws import websocket_manager, logger
 from sqlalchemy.ext.asyncio import AsyncSession
 import re
 from datetime import date
@@ -13,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import asc
 from typing import List, Union
 import logging
+from models import Product
 import config
 
 class OrderControllers: 
@@ -32,8 +35,36 @@ class OrderControllers:
                     date=eachOrder.date
                 )
                 db.add(new_order)
-                await db.commit()  # обязательно добавляем await
-                return {"message": "Заказ добавлен успешно"}
+                await db.commit()
+                await db.refresh(new_order)
+                try:
+                    result = await db.execute(select(Product).order_by(asc(Product.id)))
+                    products = result.scalars().all()
+                except HTTPException as http_ex:
+                    raise http_ex
+                except Exception as e:
+                    logging.error(f"Произошла непредвиденная ошибка: {str(e)}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Произошла непредвиденная ошибка"
+                    )
+                    
+                product = next((p for p in products if p.id == eachOrder.product_id), None)
+                notification_message = {
+                    "client_name": eachOrder.client_name,
+                    "client_phone": eachOrder.client_phone,
+                    "product_id": product.title if product else "Неизвестный товар",
+                    "quantity": eachOrder.quantity,
+                    "message": "Заказ добавлен успешно"
+                }
+                
+                """ return {"message": "Заказ добавлен успешно"}, JSONResponse(content=notification_message, status_code=201) """
+                try:
+                    await websocket_manager.broadcast(notification_message)
+                except Exception as ws_error:
+                    logging.error(f"Ошибка при отправке уведомления через WebSocket: {str(ws_error)}")
+                return JSONResponse(content=notification_message, status_code=201)
+            
             except IntegrityError as e:
                 error_code = getattr(e.orig, 'pgcode', None)
                 error_message = e.args[0]
@@ -63,6 +94,22 @@ class OrderControllers:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Произошла непредвиденная ошибка"
                 )
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+            except IntegrityError as e:
+                await db.rollback()
+                logger.error(f"Integrity error: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Ошибка при создании заказа"
+                )
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"Unexpected error: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Произошла непредвиденная ошибка"
+                )
 
         # Если пришел одиночный заказ
         if isinstance(order, OrderBase):
@@ -80,7 +127,6 @@ class OrderControllers:
             detail="Неверный формат данных"
         )
 
-        
     
     async def get_orders(db: AsyncSession):
         try:

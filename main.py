@@ -1,4 +1,4 @@
-from fastapi import APIRouter, FastAPI, Response, HTTPException, Depends, status, UploadFile, Form, File
+from fastapi import APIRouter, FastAPI, Response, HTTPException, Depends, status, UploadFile, Form, File, WebSocket
 from pydantic import ValidationError
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -21,6 +21,7 @@ from controllers.product_controllers import ProductControllers
 from controllers.order_controllers import OrderControllers
 from controllers.photo_controllers import PhotoControllers
 from controllers.user_controllers import UserControllers
+from WebSocket.ws import websocket_manager, logger
 import os
 import config
 import logging
@@ -430,6 +431,21 @@ async def remove_user(
         )
 
     return await UserControllers.del_user(id, db)
+
+# WebSocket
+
+@app.websocket("/ws/")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            logger.info(f"Received message from client: {data}")
+            # Здесь можно добавить обработку входящих сообщений, если нужно
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+    finally:
+        websocket_manager.disconnect(websocket)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
