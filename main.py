@@ -21,7 +21,7 @@ from controllers.product_controllers import ProductControllers
 from controllers.order_controllers import OrderControllers
 from controllers.photo_controllers import PhotoControllers
 from controllers.user_controllers import UserControllers
-from WebSocket.ws import websocket_manager, logger
+from WebSocket.ws import websocket_manager, manager, logger
 import os
 import config
 import logging
@@ -322,7 +322,6 @@ async def update_order(id: int, photo_update: PhotoForUpdate, db: AsyncSession =
 async def remove_order(id: int, db: AsyncSession = Depends(get_db)):
     return await PhotoControllers.del_photo(id, db)
 
-
 # Доступ к приложению
 
 @app.post(
@@ -433,19 +432,24 @@ async def remove_user(
     return await UserControllers.del_user(id, db)
 
 # WebSocket
-
-@app.websocket("/ws/")
+ 
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket_manager.connect(websocket)
+    await manager.connect(websocket)
     try:
         while True:
             data = await websocket.receive_text()
-            logger.info(f"Received message from client: {data}")
-            # Здесь можно добавить обработку входящих сообщений, если нужно
+            logger.info(f"Received: {data}")
     except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+        logger.error(f"Error: {e}")
     finally:
-        websocket_manager.disconnect(websocket)
+        manager.disconnect(websocket)
+
+@app.post("/send-notification")
+async def send_notification(message: str):
+    await manager.broadcast({"message": message})
+    return {"status": "Message sent"}      
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -541,12 +545,10 @@ async def custom_http_exception_handler(request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={"message": exc.detail}
-    )
-        
+    )     
         
 app.include_router(router)
 app.include_router(verify, prefix="")
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 4000))

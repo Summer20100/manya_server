@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, WebSocket
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 import config
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+
 
 # Строка подключения к БД
 SQLALCHEMY_DATABASE_URL = (
@@ -70,7 +71,9 @@ app.add_middleware(
         "http://localhost:5175" ,
         "https://marusina-sweets.vercel.app",
         "https://marusina-sweets-admin.vercel.app",
-        "https://marusina-sweets-dj9l.onrender.com"
+        "https://marusina-sweets-dj9l.onrender.com",
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000"
     ],  # ✅ Указываем конкретный origin
     allow_credentials=True,  # ✅ Разрешаем передачу credentials (cookies, токены)
     allow_methods=["*"],  # Разрешаем все методы (GET, POST, PUT, DELETE)

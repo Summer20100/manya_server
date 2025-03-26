@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from pydantic import BaseModel, FieldValidationInfo, field_validator, ValidationError
 from fastapi.responses import JSONResponse
-from WebSocket.ws import websocket_manager, logger
+from WebSocket.ws import websocket_manager, manager, logger
 from sqlalchemy.ext.asyncio import AsyncSession
 import re
 from datetime import date
@@ -61,6 +61,7 @@ class OrderControllers:
                 """ return {"message": "Заказ добавлен успешно"}, JSONResponse(content=notification_message, status_code=201) """
                 try:
                     await websocket_manager.broadcast(notification_message)
+                    await manager.broadcast(notification_message)
                 except Exception as ws_error:
                     logging.error(f"Ошибка при отправке уведомления через WebSocket: {str(ws_error)}")
                 return JSONResponse(content=notification_message, status_code=201)
